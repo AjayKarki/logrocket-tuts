@@ -1,6 +1,6 @@
 from ariadne.constants import PLAYGROUND_HTML
 from flask import Flask, request, jsonify
-from ariadne import gql, QueryType, make_executable_schema, graphql_sync
+from ariadne import gql, QueryType, MutationType, make_executable_schema, graphql_sync
 
 # Define type definitions (schema) using SDL
 type_defs = gql(
@@ -14,12 +14,19 @@ type_defs = gql(
         description: String!
         country: String!
     }
+
+    type Mutation{add_place(name: String!, description: String!, country: String!): Place}
+
     """
 )
 
 # Initialize Query
 
 query = QueryType()
+
+# Initialize Mutation
+
+mutation = MutationType()
 
 # Define Resolvers
 @query.field("places")
@@ -34,8 +41,13 @@ def places(*_):
        },
    ]
 
+@mutation.field("add_place")
+def add_place(_, info, name, description, country):
+   places.append({"name": name, "description": description, "country": country})
+   return {"name": name, "description": description, "country": country}
 
-schema = make_executable_schema(type_defs, query)
+
+schema = make_executable_schema(type_defs, [query, mutation])
 app = Flask(__name__)
 
 # Create a GraphQL Playground UI for the GraphQL schema
@@ -57,4 +69,13 @@ def graphql_server():
 
 # Run the app
 if __name__ == "__main__":
+   places = [
+       {"name": "Paris", "description": "The city of lights", "country": "France"},
+       {"name": "Rome", "description": "The city of pizza", "country": "Italy"},
+       {
+           "name": "London",
+           "description": "The city of big buildings",
+           "country": "United Kingdom",
+       },
+   ]
    app.run(debug=True)
