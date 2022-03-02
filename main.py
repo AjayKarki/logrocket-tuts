@@ -1,5 +1,6 @@
-from ariadne.asgi import GraphQL
-from ariadne import gql, QueryType, make_executable_schema
+from ariadne.constants import PLAYGROUND_HTML
+from flask import Flask, request, jsonify
+from ariadne import gql, QueryType, make_executable_schema, graphql_sync
 
 # Define type definitions (schema) using SDL
 type_defs = gql(
@@ -35,4 +36,25 @@ def places(*_):
 
 
 schema = make_executable_schema(type_defs, query)
-app = GraphQL(schema)
+app = Flask(__name__)
+
+# Create a GraphQL Playground UI for the GraphQL schema
+@app.route("/graphql", methods=["GET"])
+def graphql_playground():
+   # Playground accepts GET requests only.
+   # If you wanted to support POST you'd have to
+   # change the method to POST and set the content
+   # type header to application/graphql
+   return PLAYGROUND_HTML
+
+# Create a GraphQL endpoint for executing GraphQL queries
+@app.route("/graphql", methods=["POST"])
+def graphql_server():
+   data = request.get_json()
+   success, result = graphql_sync(schema, data, context_value={"request": request})
+   status_code = 200 if success else 400
+   return jsonify(result), status_code
+
+# Run the app
+if __name__ == "__main__":
+   app.run(debug=True)
